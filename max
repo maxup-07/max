@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sharma General Store</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+body {font-family:Poppins;margin:0;background:#f3f4f6;}
+header {background:#065f46;color:white;text-align:center;padding:15px;}
+.tagline {font-size:14px;color:#d1fae5;}
+
+.filters {display:flex;gap:8px;padding:10px;overflow:auto;}
+.filters button {border:none;padding:8px 12px;border-radius:20px;background:#e5e7eb;}
+.filters button.active {background:#059669;color:white;}
+
+.products {display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;padding:10px;}
+.card {background:white;border-radius:10px;padding:10px;box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+.card img {width:100%;border-radius:8px;}
+.add {background:#059669;color:white;border:none;width:100%;padding:8px;border-radius:6px;}
+
+.cart-btn {position:fixed;bottom:20px;right:20px;background:#059669;color:white;padding:15px;border-radius:50%;}
+.cart-modal {position:fixed;bottom:0;width:100%;background:white;max-height:80%;overflow:auto;display:none;padding:10px;}
+
+.cart-item {display:flex;justify-content:space-between;margin:10px 0;}
+.qty button {padding:5px;}
+
+.whatsapp {position:fixed;bottom:80px;right:20px;background:#25D366;color:white;padding:12px;border-radius:50%;}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>Sharma General Store</h2>
+<div class="tagline">Fresh groceries delivered to your door</div>
+</header>
+
+<div class="filters">
+<button onclick="filter('All')" class="active">All</button>
+<button onclick="filter('Groceries')">Groceries</button>
+<button onclick="filter('Dairy')">Dairy</button>
+<button onclick="filter('Snacks')">Snacks</button>
+<button onclick="filter('Beverages')">Beverages</button>
+</div>
+
+<div class="products" id="products"></div>
+
+<div class="cart-btn" onclick="toggleCart()">🛒 <span id="count">0</span></div>
+
+<div class="cart-modal" id="cartModal">
+<h3>Your Cart</h3>
+<div id="cartItems"></div>
+<h3>Total: ₹<span id="total">0</span></h3>
+
+<form action="https://formspree.io/f/YOUR_FORM_ID" method="POST" onsubmit="prepareOrder()">
+<input type="hidden" name="order" id="orderData">
+
+<input required name="name" placeholder="Name"><br><br>
+<input required name="phone" placeholder="Phone"><br><br>
+<textarea required name="address" placeholder="Address"></textarea><br><br>
+<textarea name="notes" placeholder="Instructions"></textarea><br><br>
+
+<button type="submit">Place Order</button>
+</form>
+
+<p id="msg"></p>
+</div>
+
+<a class="whatsapp" href="https://wa.me/919999999999" target="_blank">💬</a>
+
+<script>
+const data=[
+{name:"Aashirvaad Atta (5kg)",price:280,cat:"Groceries",img:"https://i.ibb.co/8X1sZrT/atta.jpg",desc:"Premium flour"},
+{name:"Basmati Rice (5kg)",price:450,cat:"Groceries",img:"https://i.ibb.co/jfJ9t6g/rice.jpg",desc:"Long grain rice"},
+{name:"Amul Butter (500g)",price:280,cat:"Dairy",img:"https://i.ibb.co/ZV6WcXk/butter.jpg",desc:"Fresh butter"},
+{name:"Milk (1L)",price:60,cat:"Dairy",img:"https://i.ibb.co/5KkW9YF/milk.jpg",desc:"Fresh milk"},
+{name:"Lays Chips",price:20,cat:"Snacks",img:"https://i.ibb.co/4dQw0bW/lays.jpg",desc:"Crispy snack"},
+{name:"Biscuits Pack",price:30,cat:"Snacks",img:"https://i.ibb.co/m9hB1Yd/biscuit.jpg",desc:"Tasty biscuits"},
+{name:"Coca Cola (1L)",price:60,cat:"Beverages",img:"https://i.ibb.co/YR6X9YV/coke.jpg",desc:"Cold drink"},
+{name:"Real Juice",price:120,cat:"Beverages",img:"https://i.ibb.co/Y7R1N9F/juice.jpg",desc:"Fruit juice"}
+];
+
+let cart=JSON.parse(localStorage.getItem("cart"))||[];
+
+function show(list){
+document.getElementById("products").innerHTML=list.map((p,i)=>`
+<div class="card">
+<img src="${p.img}" loading="lazy" alt="${p.name}">
+<h4>${p.name}</h4>
+<p>₹${p.price}</p>
+<button class="add" onclick="add(${i})">Add</button>
+</div>`).join("");
+}
+
+function filter(cat){
+event.target.classList.add("active");
+show(cat==="All"?data:data.filter(p=>p.cat===cat));
+}
+
+function add(i){
+let f=cart.find(x=>x.name===data[i].name);
+if(f)f.qty++; else cart.push({...data[i],qty:1});
+save();
+}
+
+function save(){
+localStorage.setItem("cart",JSON.stringify(cart));
+update();
+}
+
+function update(){
+document.getElementById("count").innerText=cart.reduce((a,b)=>a+b.qty,0);
+
+let html="",total=0;
+cart.forEach((c,i)=>{
+total+=c.price*c.qty;
+html+=`<div class="cart-item">
+${c.name} x ${c.qty}
+<div class="qty">
+<button onclick="chg(${i},-1)">-</button>
+<button onclick="chg(${i},1)">+</button>
+</div>
+</div>`;
+});
+
+document.getElementById("cartItems").innerHTML=html;
+document.getElementById("total").innerText=total;
+}
+
+function chg(i,v){
+cart[i].qty+=v;
+if(cart[i].qty<=0)cart.splice(i,1);
+save();
+}
+
+function toggleCart(){
+let m=document.getElementById("cartModal");
+m.style.display=m.style.display==="block"?"none":"block";
+}
+
+function prepareOrder(){
+let txt="";
+cart.forEach(i=>txt+=`${i.name} x${i.qty} = ₹${i.qty*i.price}\n`);
+txt+="Total ₹"+document.getElementById("total").innerText;
+document.getElementById("orderData").value=txt;
+
+cart=[];
+localStorage.removeItem("cart");
+
+setTimeout(()=>document.getElementById("msg").innerText="Order placed! Sharma Store will contact you on WhatsApp.",500);
+}
+
+show(data);
+update();
+</script>
+
+</body>
+</html>
